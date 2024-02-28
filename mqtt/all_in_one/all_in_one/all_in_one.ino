@@ -13,15 +13,18 @@ WiFiClient wifiClient;
 const char* BROKER_MQTT = "mqtt.eclipseprojects.io"; //URL do broker MQTT que se deseja utilizar
 int BROKER_PORT = 1883;                      // Porta do Broker MQTT
 
+
 #define ID_MQTT  "richter_ID01"            //Informe um ID unico e seu. Caso sejam usados IDs repetidos a ultima conexão irá sobrepor a anterior. 
 #define TOPIC_PUBLISH "richter_teste_01"    //Informe um Tópico único. Caso sejam usados tópicos em duplicidade, o último irá eliminar o anterior.
+#define TOPIC_SUBSCRIBE "richter_teste_02"
 PubSubClient MQTT(wifiClient);        // Instancia o Cliente MQTT passando o objeto espClient
 
 //Declaração das Funções
 void mantemConexoes();  //Garante que as conexoes com WiFi e MQTT Broker se mantenham ativas
 void conectaWiFi();     //Faz conexão com WiFi
 void conectaMQTT();     //Faz conexão com Broker MQTT
-void enviaPacote();     //
+void EnviaValorOn();
+void EnviaValorOff();
 void recebePacote(char* topic, byte* payload, unsigned int length);
 
 void setup() {
@@ -37,8 +40,12 @@ void setup() {
 
 void loop() {
   mantemConexoes();
-  enviaValores();
+  EnviaValorOn();
   MQTT.loop();
+  delay(5000);
+  EnviaValorOff();
+  MQTT.loop();
+  delay(5000);
 }
 
 void mantemConexoes() {
@@ -78,6 +85,7 @@ void conectaMQTT() {
         Serial.println(BROKER_MQTT);
         if (MQTT.connect(ID_MQTT)) {
             Serial.println("Conectado ao Broker com sucesso!");
+            MQTT.subscribe(TOPIC_SUBSCRIBE);
         } 
         else {
             Serial.println("Noo foi possivel se conectar ao broker.");
@@ -87,15 +95,39 @@ void conectaMQTT() {
     }
 }
 
-void enviaValores() {
+void EnviaValorOn() {
 
-  MQTT.publish(TOPIC_PUBLISH, "Olá Bia!");
-  Serial.println("Payload enviado!");
-  delay(2500);
-
-  MQTT.publish(TOPIC_PUBLISH, "Tudo bem?");
-  Serial.println("Payload enviado!");
-  delay(2500);
+  MQTT.publish(TOPIC_PUBLISH, "1");
+  Serial.println("Payload enviado, valor 1");
 
 }
 
+void EnviaValorOff() {
+
+  MQTT.publish(TOPIC_PUBLISH, "0");
+  Serial.println("Payload enviado, valor 0");
+
+}
+
+
+void recebePacote(char* topic, byte* payload, unsigned int length) 
+{
+    String msg;
+
+    //obtem a string do payload recebido
+    for(int i = 0; i < length; i++) 
+    {
+       char c = (char)payload[i];
+       msg += c;
+    }
+
+    Serial.println("Mensagem: " + msg);
+
+    if (msg == "Desligar") {
+       digitalWrite(pinLED1, HIGH);
+    }
+
+    if (msg == "Ligar") {
+       digitalWrite(pinLED1, LOW);
+    }
+}
